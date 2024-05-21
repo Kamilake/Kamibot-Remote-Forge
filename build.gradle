@@ -15,6 +15,8 @@ base {
 // Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+jarJar.enable()
+
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
     // The mappings can be changed at any time and must be in the following format.
@@ -144,6 +146,17 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    compileOnly 'org.projectlombok:lombok:1.18.32'
+    annotationProcessor 'org.projectlombok:lombok:1.18.32'
+
+    implementation  'org.java-websocket:Java-WebSocket:1.5.6'
+    jarJar('org.java-websocket:Java-WebSocket:[1.5.6,9.0)')
+
+    // https://mvnrepository.com/artifact/org.json/json
+    implementation 'org.json:json:20240303'
+    jarJar('org.json:json:[20240303,20240304)')
+
+
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -165,7 +178,6 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
-// Example for how to get properties into the manifest for reading at runtime.
 tasks.named('jar', Jar).configure {
     manifest {
         attributes([

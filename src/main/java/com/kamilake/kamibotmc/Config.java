@@ -1,7 +1,8 @@
-package com.example.examplemod;
+package com.kamilake.kamibotmc;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -9,18 +10,28 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 // An example config class. This is not required, but it's a good idea to have one to keep your config organized.
 // Demonstrates how to use Forge's config APIs
-@Mod.EventBusSubscriber(modid = Kamibot.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+
+@Mod.EventBusSubscriber(value = Dist.DEDICATED_SERVER, modid = Kamibotmc.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config {
   private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
   private static final ForgeConfigSpec.BooleanValue LOG_DIRT_BLOCK = BUILDER
       .comment("Whether to log the dirt block on common setup")
       .define("logDirtBlock", true);
+
+  private static final ForgeConfigSpec.ConfigValue<String> KAMIBOT_SOCKET_URL = BUILDER
+      .comment("카미봇 서버 URL")
+      .define("kamibotSocketUrl", "wss://kamibot.kami.live/minecraftForge/ws");
+
+  private static final ForgeConfigSpec.IntValue KAMIBOTMC_UUID = BUILDER
+      .comment("A magic number")
+      .defineInRange("uuid", new Random().nextInt(Integer.MAX_VALUE), 0, Integer.MAX_VALUE);
 
   private static final ForgeConfigSpec.IntValue MAGIC_NUMBER = BUILDER
       .comment("A magic number")
@@ -35,10 +46,13 @@ public class Config {
       .comment("A list of items to log on common setup.")
       .defineListAllowEmpty("items", List.of("minecraft:iron_ingot"), Config::validateItemName);
 
+
   static final ForgeConfigSpec SPEC = BUILDER.build();
 
   public static boolean logDirtBlock;
   public static int magicNumber;
+  public static String kamibotSocketUrl;
+  public static int kamibotmcUuid;
   public static String magicNumberIntroduction;
   public static Set<Item> items;
 
@@ -50,6 +64,8 @@ public class Config {
   static void onLoad(final ModConfigEvent event) {
     logDirtBlock = LOG_DIRT_BLOCK.get();
     magicNumber = MAGIC_NUMBER.get();
+    kamibotSocketUrl = KAMIBOT_SOCKET_URL.get();
+    kamibotmcUuid = KAMIBOTMC_UUID.get();
     magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
 
     // convert the list of strings into a set of items
