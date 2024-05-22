@@ -1,8 +1,13 @@
 package com.kamilake.kamibotmc;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.logging.LogUtils;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
@@ -17,8 +22,9 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import java.util.ArrayList;
-import java.util.List;
+import net.minecraftforge.server.ServerLifecycleHooks;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -98,9 +104,9 @@ public class Kamibotmc {
 
   private void commonSetup(final FMLCommonSetupEvent event) {
     // Some common setup code
-    LOGGER.info("HELLO FROM COMMON SETUP@@@@@@@@@@@@@@@@@");
-    LOGGER.info("Connecting " + Config.kamibotSocketUrl);
-    LOGGER.info("uuid: " + Config.kamibotSocketUrl);
+    LOGGER.info("====Kamibot Remote====");
+    LOGGER.info("Connecting " + Config.kamibotSocketUrl + "...");
+    LOGGER.info("UUID: " + Config.kamibotSocketUrl);
     // if (Config.logDirtBlock)
     // LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
 
@@ -120,12 +126,53 @@ public class Kamibotmc {
   @SubscribeEvent
   public void onServerStarting(ServerStartingEvent event) {
     String motd = event.getServer().getMotd(); // Get the server's MOTD
-    LOGGER.info("Server Starting: " + motd);
-    LOGGER.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" + event.getServer().getServerModName());
+    CommandDispatcher<CommandSourceStack> commandDispatcher = event.getServer().getCommands().getDispatcher();
+    LiteralCommandNode<CommandSourceStack> cmdHello = Commands.literal("kamibot-info")
+        .requires((commandSource) -> commandSource.hasPermission(2))
+        .executes((commandContext) -> {
+          commandContext.getSource().sendSuccess(() -> {
+            String output = "====Kamibot Remote 정보====\n";
+            output += "서버: " + motd + "\n";
+            output += "UUID: " + Config.kamibotmcUuid + "\n";
+            output += "소켓: " + Config.kamibotSocketUrl + "\n";
+            long delay = measureHttpGetDelay();
+            output += "소켓 연결 상태: " + WebsocketSender.instance == null
+              ? "소켓 없음"
+              : WebsocketSender.instance.isOpen() ? "연결됨, Https (" + (delay == -1 ? "측정 불가능" : delay + "ms") + ")" : "연결 끊김";
+            return Component.literal(output);
+          }, false);
+          return 1;
+        }).build();
+
+    commandDispatcher.getRoot().addChild(cmdHello);
+
     new EventHandler()
         .set("eventType", "ServerStartingEvent")
         .set("motd", motd)
         .send();
+  }
+
+  public long measureHttpGetDelay() {
+    try {
+      URL url = new URL("https://kamibot.kami.live/api");
+      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+      connection.setRequestMethod("GET");
+      connection.setConnectTimeout(1000); // Set timeout to 1000ms
+      connection.setReadTimeout(1000); // Set read timeout to 1000ms
+
+      long startTime = System.currentTimeMillis();
+      int responseCode = connection.getResponseCode();
+      long endTime = System.currentTimeMillis();
+
+      if (responseCode == HttpURLConnection.HTTP_OK) {
+        return endTime - startTime;
+      } else {
+        return -1;
+      }
+    } catch (Exception e) {
+      return -1;
+    }
   }
 
   // // You can use EventBusSubscriber to automatically register all static
@@ -173,28 +220,31 @@ public class Kamibotmc {
     LOGGER.info("LEVEL CHANGE >> {}", event.getEntity().getDisplayName().getString());
   }
 
-  public static List<Player> players = new ArrayList<Player>();
-
   @SubscribeEvent
   public void onPlayerConnect(PlayerEvent.PlayerLoggedInEvent event) {
     LOGGER.info("PLAYER CONNECT >> {}", event.getEntity().getDisplayName().getString());
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+
     new EventHandler()
         .set("eventType", "PlayerLoggedInEvent")
         .set("playerName", event.getEntity().getDisplayName().getString())
         .set("playerUUID", event.getEntity().getUUID().toString())
+        .set("playerCount", server.getPlayerCount())
+        .set("maxPlayerCount", server.getMaxPlayers())
         .send();
-    players.add(event.getEntity());
   }
 
   @SubscribeEvent
   public void onPlayerDisconnect(PlayerEvent.PlayerLoggedOutEvent event) {
     LOGGER.info("PLAYER DISCONNECT >> {}", event.getEntity().getDisplayName().getString());
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
     new EventHandler()
         .set("eventType", "PlayerLoggedOutEvent")
         .set("playerName", event.getEntity().getDisplayName().getString())
         .set("playerUUID", event.getEntity().getUUID().toString())
+        .set("playerCount", server.getPlayerCount())
+        .set("maxPlayerCount", server.getMaxPlayers())
         .send();
-    players.remove(event.getEntity());
   }
 
   @SubscribeEvent
@@ -223,8 +273,10 @@ public class Kamibotmc {
           .set("killerName", killer)
           .set("damageSource", event.getSource().getMsgId())
           .set("playerPos", playerPosString)
+          .set("playerUUID", event.getEntity().getUUID().toString())
           .set("deathMessage", deathMessage)
           .send();
     }
   }
+
 }

@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WebsocketSender extends WebSocketClient {
 
-  static WebsocketSender instance;
+  public static WebsocketSender instance;
   private static final Logger LOGGER = LogUtils.getLogger();
 
   public WebsocketSender(URI serverUri) {
@@ -28,7 +28,6 @@ public class WebsocketSender extends WebSocketClient {
   }
 
   public static void sendMessage(String message) {
-
     try {
       if (instance == null) {
         instance = new WebsocketSender(URI.create(Config.kamibotSocketUrl));
