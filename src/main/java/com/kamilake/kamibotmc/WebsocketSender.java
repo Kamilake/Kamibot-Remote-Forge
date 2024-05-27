@@ -32,16 +32,20 @@ public class WebsocketSender extends WebSocketClient {
       if (instance == null) {
         instance = new WebsocketSender(URI.create(Config.kamibotSocketUrl));
         LOGGER.info("Connecting to websocket server... (" + Config.kamibotSocketUrl + ")");
-        instance.connectBlocking(5, TimeUnit.SECONDS);
+        instance.connectBlocking(10, TimeUnit.SECONDS);
         instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotmcUuid + "}");
       }
       instance.send(message);
-    } catch (WebsocketNotConnectedException e) {
+    } catch (InterruptedException | WebsocketNotConnectedException e) {
       LOGGER.error("Failed to send message: " + message + " because the websocket is not connected.");
-      instance = null;
-    } catch (InterruptedException e) {
-      LOGGER.error("Failed to connect to websocket server. (InterruptedException)");
-      instance = null;
+      instance = new WebsocketSender(URI.create(Config.kamibotSocketUrl));
+      LOGGER.info("Reconnecting to websocket server... (" + Config.kamibotSocketUrl + ")");
+      try {
+        instance.connectBlocking(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e1) {
+      }
+      instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotmcUuid + "}");
+      instance.send(message);
     }
   }
 

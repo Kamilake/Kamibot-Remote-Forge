@@ -1,7 +1,9 @@
 package com.kamilake.kamibotmc;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import com.mojang.brigadier.tree.RootCommandNode;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -9,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -22,6 +25,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -77,8 +81,10 @@ public class Kamibotmc {
   // }).build());
 
   public Kamibotmc() {
+
     IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
+    if (FMLLoader.getDist() == Dist.CLIENT) return; // 클라이언트에서 실행되면 초기화를 중단합니다.
     // Register the commonSetup method for modloading
     modEventBus.addListener(this::commonSetup);
 
@@ -126,9 +132,10 @@ public class Kamibotmc {
   @SubscribeEvent
   public void onServerStarting(ServerStartingEvent event) {
     String motd = event.getServer().getMotd(); // Get the server's MOTD
-    CommandDispatcher<CommandSourceStack> commandDispatcher = event.getServer().getCommands().getDispatcher();
-    LiteralCommandNode<CommandSourceStack> cmdHello = Commands.literal("kamibot-info")
-        .requires((commandSource) -> commandSource.hasPermission(2))
+    RootCommandNode<CommandSourceStack> commandNode = event.getServer().getCommands().getDispatcher().getRoot();
+    commandNode.addChild(Commands.literal("kamibot-info")
+        // .requires((commandSource) -> commandSource.hasPermission(2)) // 권한이 필요한 경우
+        .requires((commandSource) -> true) // 권한이 필요하지 않은 경우
         .executes((commandContext) -> {
           commandContext.getSource().sendSuccess(() -> {
             String output = "====Kamibot Remote 정보====\n";
@@ -142,9 +149,42 @@ public class Kamibotmc {
             return Component.literal(output);
           }, false);
           return 1;
-        }).build();
+        }).build());
 
-    commandDispatcher.getRoot().addChild(cmdHello);
+    commandNode.addChild(Commands.literal("kamibot-register")
+        .requires((commandSource) -> commandSource.hasPermission(2))
+        .then(Commands.argument("url", StringArgumentType.string())
+            .executes((commandContext) -> {
+              String url = StringArgumentType.getString(commandContext, "url");
+              // URL 등록 로직
+              // https://discord.com/channels/996780771564081262/996984390833938482
+
+              String[] urlParts = url.split("/");
+              if (urlParts.length < 6 || !urlParts[2].equals("discord.com") || !urlParts[3].equals("channels")) {
+                commandContext.getSource()
+                    .sendFailure(Component.literal(
+                        "올바른 Discord 채널 링크를 입력하세요.\n 예시: /kamibot-register https://discord.com/channels/996780771564081262/996953596329476126"));
+                return 1;
+              }
+              String guildId = urlParts[4];
+              String channelId = urlParts[5];
+
+              new EventHandler()
+                  .set("eventType", "RegisterChannelEvent")
+                  .set("guildId", guildId)
+                  .set("channelId", channelId)
+                  .set("serverName", motd)
+                  .set("uuid", Config.kamibotmcUuid)
+                  .send();
+
+              commandContext.getSource().sendSuccess(() -> Component.literal("등록 요청에 성공했어요! 해당 채널에서 카미봇이 보낸 메세지를 확인해보세요."), false);
+              return 1;
+            }))
+        .executes((commandContext) -> {
+
+          commandContext.getSource().sendFailure(Component.literal("사용법: /kamibot-register <채널 링크>\n연동하고 싶은 Discord 채널을 우클릭한 다음 '링크 복사하기'를 누르세요."));
+          return 1;
+        }).build());
 
     new EventHandler()
         .set("eventType", "ServerStartingEvent")
@@ -194,7 +234,7 @@ public class Kamibotmc {
   // onServerChatEvent
   @SubscribeEvent
   public void onServerChatEvent(ServerChatEvent event) {
-    LOGGER.info("CHAT >> {}", event.getMessage());
+    // LOGGER.info("CHAT >> {}", event.getMessage());
     new EventHandler()
         .set("eventType", "ServerChatEvent")
         .set("message", event.getMessage().getString())
@@ -217,12 +257,12 @@ public class Kamibotmc {
 
   @SubscribeEvent
   public void onPlayerLevelChange(PlayerXpEvent.LevelChange event) {
-    LOGGER.info("LEVEL CHANGE >> {}", event.getEntity().getDisplayName().getString());
+    // LOGGER.info("LEVEL CHANGE >> {}", event.getEntity().getDisplayName().getString());
   }
 
   @SubscribeEvent
   public void onPlayerConnect(PlayerEvent.PlayerLoggedInEvent event) {
-    LOGGER.info("PLAYER CONNECT >> {}", event.getEntity().getDisplayName().getString());
+    // LOGGER.info("PLAYER CONNECT >> {}", event.getEntity().getDisplayName().getString());
     MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
 
     new EventHandler()
@@ -236,7 +276,7 @@ public class Kamibotmc {
 
   @SubscribeEvent
   public void onPlayerDisconnect(PlayerEvent.PlayerLoggedOutEvent event) {
-    LOGGER.info("PLAYER DISCONNECT >> {}", event.getEntity().getDisplayName().getString());
+    // LOGGER.info("PLAYER DISCONNECT >> {}", event.getEntity().getDisplayName().getString());
     MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
     new EventHandler()
         .set("eventType", "PlayerLoggedOutEvent")
@@ -250,7 +290,7 @@ public class Kamibotmc {
   @SubscribeEvent
   public void onLivingDeath(LivingDeathEvent event) {
     if (event.getEntity() instanceof net.minecraft.world.entity.player.Player) {
-      LOGGER.info("PLAYER DEATH >> {}", event.getEntity().getDisplayName().getString());
+      // LOGGER.info("PLAYER DEATH >> {}", event.getEntity().getDisplayName().getString());
       String player = event.getEntity().getDisplayName().getString();
       String killer;
       Entity killerEntity = event.getSource().getEntity();
@@ -265,7 +305,7 @@ public class Kamibotmc {
               + String.format("%.2f", playerPos.y) + ", "
               + String.format("%.2f", playerPos.z);
       String deathMessage = player + " was killed by " + killer;
-      LOGGER.info("DEATH MESSAGE >> {}", deathMessage);
+      // LOGGER.info("DEATH MESSAGE >> {}", deathMessage);
       new EventHandler()
           .set("result", event.getResult().name())
           .set("eventType", "PlayerDeathEvent")
