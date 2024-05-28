@@ -1,11 +1,11 @@
-package com.kamilake.kamibotmc;
+package com.kamilake.kamibot;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.handshake.ServerHandshake;
 import org.json.JSONObject;
 import org.slf4j.Logger;
-import com.kamilake.kamibotmc.KamibotLib.Async;
+import com.kamilake.kamibot.KamibotLib.Async;
 import com.mojang.logging.LogUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -33,7 +33,7 @@ public class WebsocketSender extends WebSocketClient {
         instance = new WebsocketSender(URI.create(Config.kamibotSocketUrl));
         LOGGER.info("Connecting to websocket server... (" + Config.kamibotSocketUrl + ")");
         instance.connectBlocking(10, TimeUnit.SECONDS);
-        instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotmcUuid + "}");
+        instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotRemoteUuid + "}");
       }
       instance.send(message);
     } catch (InterruptedException | WebsocketNotConnectedException e) {
@@ -44,7 +44,7 @@ public class WebsocketSender extends WebSocketClient {
         instance.connectBlocking(10, TimeUnit.SECONDS);
       } catch (InterruptedException e1) {
       }
-      instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotmcUuid + "}");
+      instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotRemoteUuid + "}");
       instance.send(message);
     }
   }

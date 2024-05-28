@@ -1,4 +1,4 @@
-package com.kamilake.kamibotmc;
+package com.kamilake.kamibot;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -32,10 +32,10 @@ import java.net.URL;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod(Kamibotmc.MODID)
-public class Kamibotmc {
+@Mod(KamibotRemote.MODID)
+public class KamibotRemote {
   // Define mod id in a common place for everything to reference
-  public static final String MODID = "kamibotmc";
+  public static final String MODID = "kamibot-remote";
   // Directly reference a slf4j logger
   private static final Logger LOGGER = LogUtils.getLogger();
   // // Create a Deferred Register to hold Blocks which will all be registered
@@ -80,7 +80,7 @@ public class Kamibotmc {
   // your own tabs, this method is preferred over the event
   // }).build());
 
-  public Kamibotmc() {
+  public KamibotRemote() {
 
     IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
@@ -140,7 +140,7 @@ public class Kamibotmc {
           commandContext.getSource().sendSuccess(() -> {
             String output = "====Kamibot Remote 정보====\n";
             output += "서버: " + motd + "\n";
-            output += "UUID: " + Config.kamibotmcUuid + "\n";
+            output += "UUID: " + Config.kamibotRemoteUuid + "\n";
             output += "소켓: " + Config.kamibotSocketUrl + "\n";
             long delay = measureHttpGetDelay();
             output += "소켓 연결 상태: " + WebsocketSender.instance == null
@@ -163,7 +163,7 @@ public class Kamibotmc {
               if (urlParts.length < 6 || !urlParts[2].equals("discord.com") || !urlParts[3].equals("channels")) {
                 commandContext.getSource()
                     .sendFailure(Component.literal(
-                        "올바른 Discord 채널 링크를 입력하세요.\n 예시: /kamibot-register https://discord.com/channels/996780771564081262/996953596329476126"));
+                        "올바른 Discord 채널 링크를 입력하세요.\n 예시: /kamibot-register \"https://discord.com/channels/996780771564081262/996953596329476126\""));
                 return 1;
               }
               String guildId = urlParts[4];
@@ -174,7 +174,7 @@ public class Kamibotmc {
                   .set("guildId", guildId)
                   .set("channelId", channelId)
                   .set("serverName", motd)
-                  .set("uuid", Config.kamibotmcUuid)
+                  .set("uuid", Config.kamibotRemoteUuid)
                   .send();
 
               commandContext.getSource().sendSuccess(() -> Component.literal("등록 요청에 성공했어요! 해당 채널에서 카미봇이 보낸 메세지를 확인해보세요."), false);
@@ -182,7 +182,7 @@ public class Kamibotmc {
             }))
         .executes((commandContext) -> {
 
-          commandContext.getSource().sendFailure(Component.literal("사용법: /kamibot-register <채널 링크>\n연동하고 싶은 Discord 채널을 우클릭한 다음 '링크 복사하기'를 누르세요."));
+          commandContext.getSource().sendFailure(Component.literal("사용법: /kamibot-register \"<채널 링크>\"\n연동하고 싶은 Discord 채널을 우클릭한 다음 '링크 복사하기'를 누르세요."));
           return 1;
         }).build());
 

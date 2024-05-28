@@ -1,9 +1,9 @@
-package com.kamilake.kamibotmc;
+package com.kamilake.kamibot;
 
 import org.slf4j.Logger;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.kamilake.kamibotmc.KamibotLib.Async;
+import com.kamilake.kamibot.KamibotLib.Async;
 import com.mojang.logging.LogUtils;
 
 public class EventHandler {
@@ -34,7 +34,7 @@ public class EventHandler {
 
   public void send() {
     Async.run(() -> {
-      int uuid = Config.kamibotmcUuid;
+      int uuid = Config.kamibotRemoteUuid;
       event.addProperty("uuid", uuid);
       // json 형식으로 이벤트 생성
       String json = new Gson().toJson(event);

@@ -1,8 +1,8 @@
-package com.kamilake.kamibotmc;
+package com.kamilake.kamibot;
 
 import org.slf4j.Logger;
 import com.google.gson.Gson;
-import com.kamilake.kamibotmc.KamibotLib.Async;
+import com.kamilake.kamibot.KamibotLib.Async;
 import com.mojang.logging.LogUtils;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,7 +28,7 @@ public class CommonEvent {
   @Deprecated
   public void send() {
     Async.run(() -> {
-      this.uuid = Config.kamibotmcUuid; // UUID 설정
+      this.uuid = Config.kamibotRemoteUuid; // UUID 설정
       // json 형식으로 이벤트 생성
       Gson gson = new Gson();
       String json = gson.toJson(this);
