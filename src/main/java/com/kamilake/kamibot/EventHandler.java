@@ -38,7 +38,8 @@ public class EventHandler {
       event.addProperty("uuid", uuid);
       // json 형식으로 이벤트 생성
       String json = new Gson().toJson(event);
-      LOGGER.info("CommonEvent: " + json);
+      if (Config.enableVerboseLogging)
+        LOGGER.info("CommonEvent: " + json);
       WebsocketSender.sendMessage(json);
     });
   }

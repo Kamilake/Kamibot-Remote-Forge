@@ -31,15 +31,18 @@ public class WebsocketSender extends WebSocketClient {
     try {
       if (instance == null) {
         instance = new WebsocketSender(URI.create(Config.kamibotSocketUrl));
-        LOGGER.info("Connecting to websocket server... (" + Config.kamibotSocketUrl + ")");
+        if (Config.enableVerboseLogging)
+          LOGGER.info("Connecting to websocket server... (" + Config.kamibotSocketUrl + ")");
         instance.connectBlocking(10, TimeUnit.SECONDS);
         instance.send("{\"eventType\":\"auth\",\"uuid\":" + Config.kamibotRemoteUuid + "}");
       }
       instance.send(message);
     } catch (InterruptedException | WebsocketNotConnectedException e) {
-      LOGGER.error("Failed to send message: " + message + " because the websocket is not connected.");
+      if (Config.enableVerboseLogging)
+        LOGGER.error("Failed to send message: " + message + " because the websocket is not connected.");
       instance = new WebsocketSender(URI.create(Config.kamibotSocketUrl));
-      LOGGER.info("Reconnecting to websocket server... (" + Config.kamibotSocketUrl + ")");
+      if (Config.enableVerboseLogging)
+        LOGGER.info("Reconnecting to websocket server... (" + Config.kamibotSocketUrl + ")");
       try {
         instance.connectBlocking(10, TimeUnit.SECONDS);
       } catch (InterruptedException e1) {
@@ -51,12 +54,14 @@ public class WebsocketSender extends WebSocketClient {
 
   @Override
   public void onOpen(ServerHandshake handshakedata) {
-    LOGGER.info("Connected");
+    if (Config.enableVerboseLogging)
+      LOGGER.info("Connected");
   }
 
   @Override
   public void onMessage(String json) {
-    LOGGER.info("Received: " + json);
+    if (Config.enableVerboseLogging)
+      LOGGER.info("Received: " + json);
     Async.run(() -> {
       JSONObject messageObject = new JSONObject(json);
       String eventType = messageObject.getString("eventType");
@@ -64,18 +69,29 @@ public class WebsocketSender extends WebSocketClient {
         case "SendChatEvent":
           sendChatToMinecraft(messageObject.getString("message"));
           break;
+        case "SendTellEvent":
+          sendTellToMinecraft(messageObject.getString("message"), messageObject.getString("user"));
+          break;
         default:
           LOGGER.warn("Unknown event type: " + eventType);
       }
     });
   }
 
-  private void sendChatToMinecraft(String string) {
+  private void sendChatToMinecraft(String content) {
     MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
     PlayerList playerList = server.getPlayerList();
     for (ServerPlayer player : playerList.getPlayers()) {
-      player.sendSystemMessage(Component.literal(string));
+      player.sendSystemMessage(Component.literal(content));
     }
+  }
+
+  private void sendTellToMinecraft(String content, String user) {
+    MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+    PlayerList playerList = server.getPlayerList();
+    playerList.getPlayers().stream()
+        .filter(player -> player.getUUID().toString().equals(user) || player.getDisplayName().getString().equals(user))
+        .forEach(player -> player.sendSystemMessage(Component.literal(content)));
   }
 
   @Override
