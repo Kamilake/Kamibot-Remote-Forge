@@ -1,14 +1,13 @@
 package com.kamilake.kamibot;
 
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.brigadier.tree.RootCommandNode;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -35,7 +34,7 @@ import org.slf4j.Logger;
 @Mod(KamibotRemote.MODID)
 public class KamibotRemote {
   // Define mod id in a common place for everything to reference
-  public static final String MODID = "kamibot-remote";
+  public static final String MODID = "kamibot_remote";
   // Directly reference a slf4j logger
   private static final Logger LOGGER = LogUtils.getLogger();
   // // Create a Deferred Register to hold Blocks which will all be registered
@@ -169,12 +168,26 @@ public class KamibotRemote {
               String guildId = urlParts[4];
               String channelId = urlParts[5];
 
+              ServerPlayer player;
+              String playerName, playerUUID;
+              try {
+                player = commandContext.getSource().getPlayerOrException();
+                playerName = player.getDisplayName().getString();
+                playerUUID = player.getUUID().toString();
+              } catch (Exception e) {
+                player = null;
+                playerName = null;
+                playerUUID = null;
+              }
+
               new EventHandler()
                   .set("eventType", "RegisterChannelEvent")
                   .set("guildId", guildId)
                   .set("channelId", channelId)
                   .set("serverName", motd)
                   .set("uuid", Config.kamibotRemoteUuid)
+                  .set("playerName", playerName)
+                  .set("playerUUID", playerUUID)
                   .send();
 
               commandContext.getSource().sendSuccess(() -> Component.literal("등록 요청에 성공했어요! 해당 채널에서 카미봇이 보낸 메세지를 확인해보세요."), false);
@@ -183,6 +196,37 @@ public class KamibotRemote {
         .executes((commandContext) -> {
 
           commandContext.getSource().sendFailure(Component.literal("사용법: /kamibot-register \"<채널 링크>\"\n연동하고 싶은 Discord 채널을 우클릭한 다음 '링크 복사하기'를 누르세요."));
+          return 1;
+        }).build());
+
+    commandNode.addChild(Commands.literal("discord") // Discord 계정 통합
+        .requires((commandSource) -> true)
+        .then(Commands.argument("id", StringArgumentType.string())
+            .executes((commandContext) -> {
+              String id = StringArgumentType.getString(commandContext, "id");
+              ServerPlayer player;
+              try {
+                player = commandContext.getSource().getPlayerOrException();
+              } catch (Exception e) {
+                commandContext.getSource().sendFailure(Component.literal("이 명령어는 인게임에서만 사용할 수 있어요."));
+                return 1;
+              }
+              new EventHandler()
+                  .set("eventType", "DiscordIntegrationEvent")
+                  .set("discordId", id)
+                  .set("serverName", motd)
+                  .set("serverUuid", Config.kamibotRemoteUuid)
+                  .set("playerName", player.getDisplayName().getString())
+                  .set("playerUUID", player.getUUID().toString())
+                  .send();
+
+              commandContext.getSource().sendSuccess(() -> Component.literal("등록 요청에 성공했어요! 카미봇의 DM에서 카미봇이 보낸 메세지를 확인해보세요. (시간 제한 5분)"), false);
+              return 1;
+            }))
+        .executes((commandContext) -> {
+          commandContext.getSource().sendSuccess(() -> Component.literal(
+              "====Kamibot Remote 도움말====\n\n내 Minecraft 계정과 Discord 계정을 같은 이름으로 표시해주는 기능이에요.\n사용법: /discord <내 디스코드 계정>\n이렇게 하면 여러분의 메세지가 Discord 채널에서 올바른 이름으로 표시돼요!\n예시: /discord kamilake\n예시: /discord 1019061779357245521"),
+              false);
           return 1;
         }).build());
 
