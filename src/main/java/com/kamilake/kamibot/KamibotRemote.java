@@ -130,7 +130,24 @@ public class KamibotRemote {
   // You can use SubscribeEvent and let the Event Bus discover methods to call
   @SubscribeEvent
   public void onServerStarting(ServerStartingEvent event) {
-    String motd = event.getServer().getMotd(); // Get the server's MOTD
+    final String motd;// = "Forge Server"; // Default MOTD
+    {
+      boolean a;
+      try {
+        event.getServer().getMotd(); // Get the server's MOTD
+        a = false;
+      } catch (NoSuchMethodError e) {
+        a = true;
+      }
+      if (a) {
+        LOGGER.error(
+            "Failed to get server MOTD due to NoSuchMethodError. This is likely due to a version mismatch between the mod and Forge. Please download a matching version from the official GitHub page.");
+        LOGGER.error("Motd를 찾을 수 없는데, 모드 오류가 아니라 아마 모드 버전과 Forge 버전이 호환되지 않아서 그럴 수도 있어요. 공식 GitHub 페이지에서 일치하는 버전을 다운로드 받아보세요.");
+        motd = "Forge Server";
+      } else {
+        motd = event.getServer().getMotd();
+      }
+    }
     RootCommandNode<CommandSourceStack> commandNode = event.getServer().getCommands().getDispatcher().getRoot();
     commandNode.addChild(Commands.literal("kamibot-info")
         // .requires((commandSource) -> commandSource.hasPermission(2)) // 권한이 필요한 경우
@@ -326,7 +343,7 @@ public class KamibotRemote {
         .set("eventType", "PlayerLoggedOutEvent")
         .set("playerName", event.getEntity().getDisplayName().getString())
         .set("playerUUID", event.getEntity().getUUID().toString())
-        .set("playerCount", server.getPlayerCount())
+        .set("playerCount", server.getPlayerCount() - 1)
         .set("maxPlayerCount", server.getMaxPlayers())
         .send();
   }
