@@ -25,6 +25,7 @@ jobs:
 
     outputs:
       tag: ${{ steps.tag_version.outputs.new_tag }}
+      version: ${{ steps.tag_version.outputs.new_version }}
       changelog: ${{ steps.tag_version.outputs.changelog }}
       commit_message: ${{ steps.get_commit_message.outputs.COMMIT_MESSAGE }}
 
@@ -52,6 +53,7 @@ jobs:
 
     outputs:
       tag: ${{ needs.bump-version.outputs.tag }}
+      version: ${{ needs.bump-version.outputs.version }}
       changelog: ${{ needs.bump-version.outputs.changelog }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
 # # 1.20.1
@@ -167,7 +169,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew ${{ matrix.build-command }} \
-            -Prelease_version=${{ needs.release.outputs.tag }} \
+            -Prelease_version=${{ needs.release.outputs.version }} \
             -Pminecraft_version=${{ matrix.minecraft-version }} \
             -Pminecraft_version_range=${{ matrix.minecraft_version_range }} \
             -Pforge_version=${{ matrix.forge-version }} \
