@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get Commit Message
+        id: get_commit_message
+        run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      tag: ${{ steps.tag_version.outputs.new_tag }}
+      changelog: ${{ steps.tag_version.outputs.changelog }}
+      commit_message: ${{ steps.get_commit_message.outputs.COMMIT_MESSAGE }}
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: bump-version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.bump-version.outputs.tag }}
+          release_name: Release ${{ needs.bump-version.outputs.tag }}
+          draft: false
+          prerelease: false
+          body: |
+            ${{ needs.bump-version.outputs.changelog }}
+            ${{ needs.bump-version.outputs.commit_message }}
+
+    outputs:
+      tag: ${{ needs.bump-version.outputs.tag }}
+      changelog: ${{ needs.bump-version.outputs.changelog }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+  build:
+    name: Build Minecraft Plugin
+    runs-on: ubuntu-latest
+    needs: release
+    strategy:
+      matrix:
+        include:
+          - minecraft-version: "1.20.1"
+            minecraft_version_range: "[1.20.1,1.21)"
+            forge-version: "47.2.32"
+            java_version: "17"
+            build-command: "build"
+          - minecraft-version: "1.21.4"
+            minecraft_version_range: "[1.21.4,1.22)"
+            forge-version: "54.0.34"
+            java_version: "21"
+            build-command: "jarjar"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: "adopt"
+          java-version: "21"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle
+        run: |
+          ./gradlew ${{ matrix.build-command }} \
+            -Prelease_version=${{ needs.release.outputs.tag }} \
+            -Pminecraft_version=${{ matrix.minecraft-version }} \
+            -Pminecraft_version_range=${{ matrix.minecraft_version_range }} \
+            -Pforge_version=${{ matrix.forge-version }} \
+            -Pjava_version=${{ matrix.java_version }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./app/build/libs/Kamibot-Remote-Paper_${{ matrix.minecraft-version }}_${{ matrix.forge-version }}_${{ needs.release.outputs.tag }}.jar
+          asset_name: Kamibot-Remote-Paper_${{ matrix.minecraft-version }}_${{ matrix.forge-version }}_${{ needs.release.outputs.tag }}.jar
+          asset_content_type: application/zip

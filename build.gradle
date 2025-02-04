@@ -2,21 +2,25 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
 
-version = mod_version
+version = release_version
 group = mod_group_id
+
+ext {
+    mod_version = release_version
+    mapping_version = minecraft_version
+    minecraftVersion = minecraft_version
+}
 
 base {
     archivesName = mod_id
 }
-
-// Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-
+java.toolchain.languageVersion = JavaLanguageVersion.of(java_version)
 jarJar.enable()
-
+// reobf=false
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
     // The mappings can be changed at any time and must be in the following format.
@@ -150,11 +154,11 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.32'
 
     implementation  'org.java-websocket:Java-WebSocket:1.5.6'
-    jarJar('org.java-websocket:Java-WebSocket:[1.5.6,9.0)')
+    jarJar('org.java-websocket:Java-WebSocket:[1.5.6,9999.9999)')
 
     // https://mvnrepository.com/artifact/org.json/json
     implementation 'org.json:json:20240303'
-    jarJar('org.json:json:[20240303,20240304)')
+    jarJar('org.json:json:[20240303,99999999)')
 
 
 }
@@ -216,4 +220,22 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+tasks.named('jarJar', Jar).configure {
+    archiveFileName = "Kamibot-Remote-Forge_${minecraft_version}_${forge_version}_${release_version}.jar"
+}
+
+// tasks.shadowJar {
+//     dependsOn tasks.processResources
+//     // manifest {
+//     //     attributes["paperweight-mappings-namespace"] = "mojang"
+//     // }
+//     archiveFileName = "Kamibot-Remote-Forge_${minecraft_version}_${forge_version}_${release_version}.jar"
+// }
+
+sourceSets.each {
+    def dir = layout.buildDirectory.dir("sourcesSets/$it.name")
+    it.output.resourcesDir = dir
+    it.java.destinationDirectory = dir
 }
