@@ -27,6 +27,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import org.slf4j.Logger;
 
@@ -255,7 +256,7 @@ public class KamibotRemote {
 
   public long measureHttpGetDelay() {
     try {
-      URL url = new URL("https://kamibot.kami.live/api");
+      URL url = new URI("https://kamibot.app/api").toURL();
       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
       connection.setRequestMethod("GET");
