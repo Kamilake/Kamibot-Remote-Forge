@@ -248,8 +248,7 @@ public class KamibotRemote {
           return 1;
         }).build());
 
-    FMLJavaModLoadingContext modLoadingContext = FMLJavaModLoadingContext.get();
-    String releaseVersion = modLoadingContext.getActiveContainer().getModInfo().getVersion().toString();
+    String releaseVersion = ModLoadingContext.get().getActiveContainer().getModInfo().getVersion().toString();
     if (releaseVersion == null) {
       releaseVersion = "DEV";
     }
