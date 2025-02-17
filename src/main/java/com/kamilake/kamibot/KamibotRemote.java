@@ -248,9 +248,16 @@ public class KamibotRemote {
           return 1;
         }).build());
 
+    FMLJavaModLoadingContext modLoadingContext = FMLJavaModLoadingContext.get();
+    String releaseVersion = modLoadingContext.getActiveContainer().getModInfo().getVersion().toString();
+    if (releaseVersion == null) {
+      releaseVersion = "DEV";
+    }
+
     new EventHandler()
         .set("eventType", "ServerStartingEvent")
         .set("motd", motd)
+        .set("releaseVersion", releaseVersion)
         .send();
   }
 
