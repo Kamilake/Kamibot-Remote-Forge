@@ -257,6 +257,7 @@ public class KamibotRemote {
         .set("eventType", "ServerStartingEvent")
         .set("motd", motd)
         .set("releaseVersion", releaseVersion)
+        .set("variant", "Forge")
         .send();
   }
 
